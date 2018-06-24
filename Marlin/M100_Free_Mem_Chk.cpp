@@ -61,7 +61,7 @@ extern size_t  __heap_start, __heap_end, __flp;
 extern char __bss_end;
 
 #include "Marlin.h"
-#include "gcode.h"
+#include "parser.h"
 #include "hex_print_routines.h"
 
 //

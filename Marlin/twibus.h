@@ -53,7 +53,7 @@ typedef void (*twiRequestFunc_t)();
  *
  */
 class TWIBus {
-  private:
+private:
     /**
      * @brief Number of bytes on buffer
      * @description Number of bytes in the buffer waiting to be flushed to the bus
@@ -67,7 +67,7 @@ class TWIBus {
     char buffer[TWIBUS_BUFFER_SIZE];
 
 
-  public:
+public:
     /**
      * @brief Target device address
      * @description The target device address. Persists until changed.
@@ -189,9 +189,9 @@ class TWIBus {
      */
     void relay(const uint8_t bytes);
 
-    #if I2C_SLAVE_ADDRESS > 0
+#if I2C_SLAVE_ADDRESS > 0
 
-      /**
+    /**
        * @brief Register a slave receive handler
        * @details Set a handler to receive data addressed to us
        *
@@ -222,11 +222,11 @@ class TWIBus {
       void reply(char str[]=NULL);
       inline void reply(const char str[]) { this->reply((char*)str); }
 
-    #endif
+#endif
 
-    #if ENABLED(DEBUG_TWIBUS)
+#if ENABLED(DEBUG_TWIBUS)
 
-      /**
+    /**
        * @brief Prints a debug message
        * @details Prints a simple debug message "TWIBus::function: value"
        */
@@ -236,7 +236,7 @@ class TWIBus {
       static void debug(const char func[], char adr[]);
       static inline void debug(const char func[], uint8_t v) { debug(func, (uint32_t)v); }
 
-    #endif
+#endif
 };
 
 #endif // TWIBUS_H

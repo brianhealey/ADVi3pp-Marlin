@@ -25,12 +25,17 @@
 #include "configuration_store.h"
 #include "temperature.h"
 #include "cardreader.h"
-#include "stepper.h"
-#include "gcode.h"
+#include "planner.h"
+#include "parser.h"
 
 #include "advi3pp.h"
 #include "advi3pp_utils.h"
 #include "advi3pp_.h"
+
+#if ENABLED(PRINTCOUNTER)
+#include "printcounter.h"
+#include "duration_t.h"
+#endif
 
 #ifdef DEBUG
 #pragma message "This is a DEBUG build"
@@ -496,7 +501,7 @@ void Printer_::task()
 
 bool Printer_::is_busy()
 {
-    return busy_state != NOT_BUSY || planner.blocks_queued();
+    return busy_state != NOT_BUSY || planner.has_blocks_queued();
 }
 
 //! Update the status of the printer on the LCD.
@@ -1154,7 +1159,7 @@ void Printer_::move(KeyValue key_value)
 
 void Printer_::show_move()
 {
-    Stepper::finish_and_disable(); // To circumvent homing problems
+    Planner::finish_and_disable(); // To circumvent homing problems
     pages_.show_page(Page::Move);
 }
 
@@ -1239,8 +1244,8 @@ void Printer_::move_e_minus()
 void Printer_::disable_motors()
 {
     enqueue_and_echo_commands_P(PSTR("M84"));
-    axis_homed[X_AXIS] = axis_homed[Y_AXIS] = axis_homed[Z_AXIS] = false;
-    axis_known_position[X_AXIS] = axis_known_position[Y_AXIS] = axis_known_position[Z_AXIS] = false;
+    axis_homed = 0;
+    axis_known_position = 0;
 }
 
 //! Go to home on the X axis.
@@ -1900,8 +1905,8 @@ void Printer_::leveling(KeyValue key_value)
 void Printer_::leveling_home()
 {
     pages_.show_wait_page(F("Homing..."));
-    axis_homed[X_AXIS] = axis_homed[Y_AXIS] = axis_homed[Z_AXIS] = false;
-    axis_known_position[X_AXIS] = axis_known_position[Y_AXIS] = axis_known_position[Z_AXIS] = false;
+    axis_homed = 0;
+    axis_known_position = 0;
     enqueue_and_echo_commands_P(PSTR("G90")); // absolute mode
     enqueue_and_echo_commands_P((PSTR("G28"))); // homing
     task_.set_background_task(BackgroundTask(this, &Printer_::manual_leveling_task), 200);
@@ -1910,7 +1915,7 @@ void Printer_::leveling_home()
 //! Leveling Background task.
 void Printer_::manual_leveling_task()
 {
-    if(!axis_homed[X_AXIS] || !axis_homed[Y_AXIS] || !axis_homed[Z_AXIS])
+    if(!TEST(axis_homed, X_AXIS) || !TEST(axis_homed, Y_AXIS) || !TEST(axis_homed, Z_AXIS))
         return;
 
     Log::log() << F("Leveling Homed, start process") << Log::endl();
@@ -2301,15 +2306,15 @@ void Printer_::sensor_grid(KeyValue key_value)
 
 void Printer_::sensor_grid_show()
 {
-#ifdef ADVi3PP_BLTOUCH
-    WriteRamDataRequest frame{Variable::Value0};
-    for(auto y = 0; y < GRID_MAX_POINTS_Y; y++)
-        for(auto x = 0; x < GRID_MAX_POINTS_X; x++)
-            frame << Uint16(static_cast<int16_t>(z_values[x][y] * 1000));
-    frame.send();
+// #ifdef ADVi3PP_BLTOUCH
+//     WriteRamDataRequest frame{Variable::Value0};
+//     for(auto y = 0; y < GRID_MAX_POINTS_Y; y++)
+//         for(auto x = 0; x < GRID_MAX_POINTS_X; x++)
+//             frame << Uint16(static_cast<int16_t>(z_values[x][y] * 1000));
+//     frame.send();
 
-    pages_.show_page(Page::SensorGrid, false);
-#endif
+//     pages_.show_page(Page::SensorGrid, false);
+// #endif
 }
 
 void Printer_::sensor_grid_cancel()
@@ -2342,7 +2347,7 @@ void Printer_::sensor_z_height()
 
 void Printer_::z_height_tuning_home_task()
 {
-    if(!axis_homed[X_AXIS] || !axis_homed[Y_AXIS] || !axis_homed[Z_AXIS])
+    if(!TEST(axis_homed, X_AXIS) || !TEST(axis_homed, Y_AXIS) || !TEST(axis_homed, Z_AXIS))
         return;
     if(is_busy())
         return;
@@ -2548,17 +2553,18 @@ void Printer_::firmware_settings_baudrate_plus()
 void Printer_::change_usb_baudrate()
 {
     // We do not use Log because this message is always output (Log is only active in DEBUG
-    Serial.print(F("Switch USB baudrate to ")); Serial.print(usb_baudrate_); Serial.print("\r\n");
+    SERIAL_ECHO(F("Switch USB baudrate to ")); SERIAL_ECHO(usb_baudrate_); SERIAL_ECHO("\r\n");
 
     // wait for last transmitted data to be sent
-    Serial.flush();
-    Serial.begin(usb_baudrate_);
+    SERIAL_FLUSH();
+    SERIAL_ECHO_START();
+    SERIAL_ECHO(usb_baudrate_);
     // empty out possible garbage from input buffer
-    while(Serial.available())
-        Serial.read();
+    while(MYSERIAL0.available())
+        MYSERIAL0.read();
 
     // We do not use Log because this message is always output (Log is only active in DEBUG
-    Serial.print(F("\r\nUSB baudrate switched to ")); Serial.print(usb_baudrate_); Serial.print("\r\n");
+    SERIAL_ECHO(F("\r\nUSB baudrate switched to ")); SERIAL_ECHO(usb_baudrate_); SERIAL_ECHO("\r\n");
 }
 
 // ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -3224,7 +3230,9 @@ void AdvancedPause::printing()
 
 #if ENABLED(ADVANCED_PAUSE_FEATURE)
 
-void lcd_advanced_pause_show_message(const AdvancedPauseMessage message)
+void lcd_advanced_pause_show_message(const AdvancedPauseMessage message,
+                                     const AdvancedPauseMode mode=ADVANCED_PAUSE_MODE_PAUSE_PRINT,
+                                     const uint8_t extruder=active_extruder)
 {
     advi3pp::printer.advanced_pause_show_message(message);
 }

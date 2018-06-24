@@ -32,7 +32,7 @@
 
 // Fallback if no language is set. DON'T CHANGE
 #ifndef LCD_LANGUAGE
-  #define LCD_LANGUAGE en
+#define LCD_LANGUAGE en
 #endif
 
 // For character-based LCD controllers (DISPLAY_CHARSET_HD44780)
@@ -58,6 +58,7 @@
 // el-gr      Greek (Greece)
 // en         English
 // es         Spanish
+// es_utf8    Spanish (UTF8)
 // eu         Basque-Euskera
 // fi         Finnish
 // fr         French
@@ -81,32 +82,32 @@
 // zh_TW      Chinese (Taiwan)
 
 #ifdef DEFAULT_SOURCE_CODE_URL
-  #undef  SOURCE_CODE_URL
+#undef  SOURCE_CODE_URL
   #define SOURCE_CODE_URL DEFAULT_SOURCE_CODE_URL
 #endif
 
 #ifdef CUSTOM_MACHINE_NAME
-  #undef  MACHINE_NAME
+#undef  MACHINE_NAME
   #define MACHINE_NAME CUSTOM_MACHINE_NAME
 #else
-  #ifdef DEFAULT_MACHINE_NAME
-    #undef  MACHINE_NAME
+#ifdef DEFAULT_MACHINE_NAME
+#undef  MACHINE_NAME
     #define MACHINE_NAME DEFAULT_MACHINE_NAME
-  #endif
+#endif
 #endif
 
 #ifndef MACHINE_UUID
-  #define MACHINE_UUID DEFAULT_MACHINE_UUID
+#define MACHINE_UUID DEFAULT_MACHINE_UUID
 #endif
 
 #ifdef DEFAULT_WEBSITE_URL
-  #undef  WEBSITE_URL
+#undef  WEBSITE_URL
   #define WEBSITE_URL DEFAULT_WEBSITE_URL
 #endif
 
 // Common LCD messages
 
-  /* nothing here yet */
+/* nothing here yet */
 
 // Common serial messages
 #define MSG_MARLIN "Marlin"
@@ -205,8 +206,14 @@
 #define MSG_ENDSTOPS_HIT                    "endstops hit: "
 #define MSG_ERR_COLD_EXTRUDE_STOP           " cold extrusion prevented"
 #define MSG_ERR_LONG_EXTRUDE_STOP           " too long extrusion prevented"
-#define MSG_TOO_COLD_FOR_M600               "M600 Hotend too cold to change filament"
-#define MSG_SERIAL_ERROR_MENU_STRUCTURE     "Error in menu structure"
+#define MSG_HOTEND_TOO_COLD                 "Hotend too cold"
+
+#define MSG_FILAMENT_CHANGE_HEAT            "Press button (or M108) to heat nozzle"
+#define MSG_FILAMENT_CHANGE_INSERT          "Insert filament and press button (or M108)"
+#define MSG_FILAMENT_CHANGE_HEAT_LCD        "Press button to heat nozzle"
+#define MSG_FILAMENT_CHANGE_INSERT_LCD      "Insert filament and press button"
+#define MSG_FILAMENT_CHANGE_HEAT_M108       "Send M108 to heat nozzle"
+#define MSG_FILAMENT_CHANGE_INSERT_M108     "Insert filament and send M108"
 
 #define MSG_ERR_EEPROM_WRITE                "Error writing to EEPROM!"
 
@@ -232,8 +239,6 @@
 #define MSG_KP                              " Kp: "
 #define MSG_KI                              " Ki: "
 #define MSG_KD                              " Kd: "
-#define MSG_B                               "B:"
-#define MSG_T                               "T:"
 #define MSG_AT                              " @:"
 #define MSG_PID_AUTOTUNE_FINISHED           MSG_PID_AUTOTUNE " finished! Put the last Kp, Ki and Kd constants from below into Configuration.h"
 #define MSG_PID_DEBUG                       " PID_DEBUG "
@@ -274,6 +279,15 @@
 #define MSG_Y "Y"
 #define MSG_Z "Z"
 #define MSG_E "E"
+#if IS_KINEMATIC
+#define MSG_A "A"
+  #define MSG_B "B"
+  #define MSG_C "C"
+#else
+#define MSG_A "X"
+#define MSG_B "Y"
+#define MSG_C "Z"
+#endif
 #define MSG_H1 "1"
 #define MSG_H2 "2"
 #define MSG_H3 "3"
@@ -312,7 +326,7 @@
  && DISABLED(DISPLAY_CHARSET_ISO10646_PL) \
  && DISABLED(DISPLAY_CHARSET_ISO10646_CZ) \
  && DISABLED(DISPLAY_CHARSET_ISO10646_SK)
-  #define DISPLAY_CHARSET_ISO10646_1 // use the better font on full graphic displays.
+#define DISPLAY_CHARSET_ISO10646_1 // use the better font on full graphic displays.
 #endif
 
 #include "language_en.h"
